@@ -25,17 +25,20 @@ type
   TdmDb = class(TDataModule, ISubject)
     UniConnection: TUniConnection;
     MySQLUniProvider: TMySQLUniProvider;
-    ClientDataSet: TClientDataSet;
-    ClientDataSetcds_codigo_produto: TStringField;
-    ClientDataSetcds_descricao: TStringField;
-    ClientDataSetcds_quantidade: TIntegerField;
-    ClientDataSetcds_valor_unitario: TCurrencyField;
-    ClientDataSetcds_valor_total: TCurrencyField;
+    cdsProdutos: TClientDataSet;
+    cdsProdutoscds_codigo_produto: TStringField;
+    cdsProdutoscds_descricao: TStringField;
+    cdsProdutoscds_quantidade: TIntegerField;
+    cdsProdutoscds_valor_unitario: TCurrencyField;
+    cdsProdutoscds_valor_total: TCurrencyField;
     ImageList: TImageList;
+    cdsProdutoscds_totalizador: TAggregateField;
+    cdsProdutoscds_subtotal: TCurrencyField;
+    cdsProdutoscds_item_editado: TIntegerField;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
-    procedure ClientDataSetCalcFields(DataSet: TDataSet);
-    procedure ClientDataSetBeforeDelete(DataSet: TDataSet);
+    procedure cdsProdutosCalcFields(DataSet: TDataSet);
+    procedure cdsProdutosBeforeDelete(DataSet: TDataSet);
   private
     { Private declarations }
     FObservers: TList<IObserver>;
@@ -82,20 +85,23 @@ begin
   FCDSPronto := false;
 end;
 
-procedure TdmDb.ClientDataSetBeforeDelete(DataSet: TDataSet);
+procedure TdmDb.cdsProdutosBeforeDelete(DataSet: TDataSet);
 begin
   if MessageDlg('Confirma Exclusão do Item selecionado?', mtConfirmation, [mbYes, mbNo], 0) = mrNo then
      Abort; //exceção silenciosa
 end;
 
-procedure TdmDb.ClientDataSetCalcFields(DataSet: TDataSet);
+procedure TdmDb.cdsProdutosCalcFields(DataSet: TDataSet);
 begin
   if (DataSet.FieldByName('cds_quantidade').AsInteger > 0) and
      (DataSet.FieldByName('cds_valor_unitario').AsCurrency > 0) then
      begin
-       DataSet.FieldByName('cds_valor_total').AsCurrency := DataSet.FieldByName('cds_quantidade').AsInteger * DataSet.FieldByName('cds_valor_unitario').AsCurrency;
+       cdsProdutos.FieldByName('cds_valor_total').AsCurrency := DataSet.FieldByName('cds_quantidade').AsInteger*DataSet.FieldByName('cds_valor_unitario').AsCurrency;
+       cdsProdutos.FieldByName('cds_subtotal').AsCurrency    := DataSet.FieldByName('cds_quantidade').AsInteger*DataSet.FieldByName('cds_valor_unitario').AsCurrency;
+       //---
+       //cdsProdutos.FieldByName('cds_item_editado').AsInteger := DataSet.FieldByName('cds_quantidade').AsInteger+1; //Num de Edicoes
      end
-  else DataSet.FieldByName('cds_valor_total').AsCurrency := 0; //Erro no Lançamento
+  else DataSet.FieldByName('cds_valor_total').AsCurrency := 0; //Erro no Lançamento - Item não será gravado <---
 end;
 
 procedure TdmDb.ConectarDb;
@@ -136,13 +142,14 @@ begin
   if (p_quantidade > 0) and
      (p_preco_unitario > 0) and
      (Not FQuery.Eof) then
-     with ClientDataset do
+     with cdsProdutos do
        begin
          Append;
          FieldByName('cds_codigo_produto').AsString   := FQuery.FieldByName('tpd_codigo').AsString;
          FieldByName('cds_descricao').AsString        := FQuery.FieldByName('tpd_descricao').AsString;
          FieldByName('cds_quantidade').AsInteger      := p_quantidade;
          FieldByName('cds_valor_unitario').AsCurrency := p_preco_unitario;
+         FieldByName('cds_item_editado').AsInteger    := 0; // 0=Não editado
          Post;
        end
     else ShowMessage('Lançamento Inválido! Averigue a Quantidade e o Preço Unitário informado.');
@@ -250,12 +257,12 @@ var dml: String;
 
 function Numeric(Vlr: Currency): String;
 begin
-  Result := StringReplace(FormatFloat('###,##0.00', Vlr), #44, #46, [rfReplaceAll]);
+  Result := StringReplace(FormatFloat('######0.00', Vlr), #44, #46, [rfReplaceAll]);
 end;
 
 begin
   Result := -1;
-  if Not ClientDataSet.Active or Not FQuery.Active then
+  if Not cdsProdutos.Active or Not FQuery.Active then
      begin
        Exit;
        // raise Falha interna na Gravação do Pedido!
@@ -274,10 +281,11 @@ begin
                       Numeric(p_valor_total)+')';
 
       Qry.SQL.Text := dml;
+      dpsMensagemInternaInterClasses('DML: '+dml,'GravarNovoPedido'); //DEBUG
       Qry.Execute;
       id := Qry.LastInsertId;  //Equivalente a: select LAST_INSERT_ID();
       if id > -1 then //Confirma insert
-         with ClientDataSet do
+         with cdsProdutos do
             begin
               DisableControls;
               try
@@ -290,6 +298,7 @@ begin
                            FieldByName('cds_quantidade').AsString+', '+
                            Numeric(FieldByName('cds_valor_unitario').AsCurrency)+', '+
                            Numeric(FieldByName('cds_valor_total').AsCurrency)+')';
+                    dpsMensagemInternaInterClasses('DML: '+dml,'GravarNovoPedido'); //DEBUG
                     Qry.SQL.Text := dml;
                     Qry.Execute;
                     Next;
@@ -419,7 +428,7 @@ end;
 
 procedure TdmDb.PreparaClientDataset;
 begin
-  with ClientDataSet do
+  with cdsProdutos do
     begin
       DisableControls;
       try
@@ -432,13 +441,14 @@ begin
     end;
 end;
 
+// --- Totalização (sem uso de Aggregate Expression do CDS)
 function TdmDb.TotalizaClientDataset: Extended;
 var t: Currency;
 
 begin
   t := 0;
-  if ClientDataSet.Active then
-     with ClientDataSet do
+  if cdsProdutos.Active then
+     with cdsProdutos do
         begin
           DisableControls;
           try

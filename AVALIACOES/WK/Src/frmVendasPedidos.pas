@@ -106,6 +106,7 @@ begin
   if dbgPedido.Enabled then
      begin
        tot := dmDb.TotalizaClientDataset;
+       lTotal.Caption := FormatFloat('###,##0.00', tot);
        try
          TButton(Sender).Enabled := false;
          if (tot > 0) and (MessageDlg('Confirma Gravação do Pedido na Base de Dados?', mtConfirmation, [mbYes, mbNo], 0) = mrYes) then
@@ -128,8 +129,13 @@ procedure TfrmPedidos.dbgPedidoExit(Sender: TObject);
 var  tot: Extended;
 
 begin
-  tot := dmDb.TotalizaClientDataset;
-  lTotal.Caption := FormatFloat('###,##0.00', tot);
+  if dmDb.cdsProdutos.Active and (dmDb.cdsProdutos.RecordCount>0) then
+     begin
+       if dmDb.cdsProdutos.RecordCount=1 then //O Aggregate nao totalizar apenas um reg ---Bug??
+          tot := dmDb.cdsProdutos.FieldByName('cds_valor_total').AsCurrency
+       else tot := StrToFloat(dmDb.cdsProdutos.FieldByName('cds_totalizador').AsString);
+       lTotal.Caption := FormatFloat('###,##0.00', tot);
+     end;
 end;
 
 procedure TfrmPedidos.btConsultaProdutoClick(Sender: TObject);
@@ -142,7 +148,7 @@ begin
        begin
          lProduto.Caption := dmDb.FQuery.FieldByName('tpd_descricao').AsString;
          edQuant.Text := '1';
-         edPrecoUnit.Text := '0';
+         edPrecoUnit.Text := FormatFloat('###,##0.00', dmDb.FQuery.FieldByName('tpd_preco_venda').AsCurrency); //'0';
          edQuant.SetFocus;
        end
   finally
@@ -208,22 +214,16 @@ begin
 end;
 
 procedure TfrmPedidos.btAtzTotalClick(Sender: TObject);
-var  tot: Extended;
-
 begin
-  if dbgPedido.Enabled then
-     begin
-       tot := dmDb.TotalizaClientDataset;
-       lTotal.Caption := FormatFloat('###,##0.00', tot);
-     end;
+  {if dbgPedido.Enabled then} dbgPedidoExit(nil);
 end;
 
 procedure TfrmPedidos.btCancelarPedidoClick(Sender: TObject);
 begin
   LimparCampos;
   ajustarPaineldeLancamento();
-  if dmDb.ClientDataSet.Active then
-     dmDb.ClientDataSet.EmptyDataSet;
+  if dmDb.cdsProdutos.Active then
+     dmDb.cdsProdutos.EmptyDataSet;
   edCodCliente.SetFocus;
 end;
 

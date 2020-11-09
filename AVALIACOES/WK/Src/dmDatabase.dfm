@@ -13,31 +13,45 @@ object dmDb: TdmDb
     Left = 144
     Top = 40
   end
-  object ClientDataSet: TClientDataSet
+  object cdsProdutos: TClientDataSet
     Aggregates = <>
+    AggregatesActive = True
     Params = <>
-    BeforeDelete = ClientDataSetBeforeDelete
-    OnCalcFields = ClientDataSetCalcFields
+    BeforeDelete = cdsProdutosBeforeDelete
+    OnCalcFields = cdsProdutosCalcFields
     Left = 256
     Top = 40
-    object ClientDataSetcds_codigo_produto: TStringField
+    object cdsProdutoscds_codigo_produto: TStringField
       FieldName = 'cds_codigo_produto'
       Size = 16
     end
-    object ClientDataSetcds_descricao: TStringField
+    object cdsProdutoscds_descricao: TStringField
       FieldName = 'cds_descricao'
       Size = 100
     end
-    object ClientDataSetcds_quantidade: TIntegerField
+    object cdsProdutoscds_quantidade: TIntegerField
       FieldName = 'cds_quantidade'
     end
-    object ClientDataSetcds_valor_unitario: TCurrencyField
+    object cdsProdutoscds_valor_unitario: TCurrencyField
       FieldName = 'cds_valor_unitario'
     end
-    object ClientDataSetcds_valor_total: TCurrencyField
+    object cdsProdutoscds_valor_total: TCurrencyField
       FieldKind = fkCalculated
       FieldName = 'cds_valor_total'
       Calculated = True
+    end
+    object cdsProdutoscds_subtotal: TCurrencyField
+      FieldKind = fkInternalCalc
+      FieldName = 'cds_subtotal'
+    end
+    object cdsProdutoscds_item_editado: TIntegerField
+      FieldName = 'cds_item_editado'
+    end
+    object cdsProdutoscds_totalizador: TAggregateField
+      FieldName = 'cds_totalizador'
+      Active = True
+      DisplayName = ''
+      Expression = 'sum(cds_subtotal)'
     end
   end
   object ImageList: TImageList

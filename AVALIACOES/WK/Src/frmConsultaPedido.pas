@@ -17,7 +17,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   frmBaseForm,
   dmDatabase,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Data.DB,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Data.DB, System.UITypes,
   Vcl.Grids, Vcl.DBGrids, Datasnap.DBClient;
 
 type
@@ -30,7 +30,7 @@ type
     Panel2: TPanel;
     DBGrid1: TDBGrid;
     Label1: TLabel;
-    edCodCliente: TEdit;
+    edNumPedido: TEdit;
     btConsultaPedido: TButton;
     DS: TDataSource;
     dbgPedido: TDBGrid;
@@ -49,13 +49,17 @@ type
     cdsPedidocds_tdg_data_emissao: TDateTimeField;
     cdsPedidocds_tdg_valor_total: TCurrencyField;
     DSPedido: TDataSource;
+    sPedido: TShape;
+    lNumPedido: TLabel;
+    lPedido: TLabel;
     procedure btEncerrarClick(Sender: TObject);
     procedure btConsultaPedidoClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btExcluirPedidoClick(Sender: TObject);
-    procedure edCodClienteEnter(Sender: TObject);
-    procedure edCodClienteExit(Sender: TObject);
-    procedure FormShow(Sender: TObject);  private
+    procedure edNumPedidoEnter(Sender: TObject);
+    procedure edNumPedidoExit(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure edNumPedidoKeyPress(Sender: TObject; var Key: Char);  private
     procedure LimparCampos;
   private
     { Private declarations }
@@ -76,29 +80,43 @@ implementation
 
 procedure TfrmConsultas.btConsultaPedidoClick(Sender: TObject);
 begin
-
   btConsultaPedido.Enabled := false;
-  dmDb.LocalizarPedido(edCodCliente.Text);
-  if Not dmDb.FQuery.Eof then
-     begin
-       DS.DataSet := dmDb.FQuery;
-
-       with cdsPedido, dmDb do
-         begin
-          FQuery.First;
-          Append;
-          FieldByName('cds_tcl_codigo').AsInteger := FQuery.FieldByName('tcl_codigo').AsInteger;
-          FieldByName('cds_tcl_nome').AsString    := FQuery.FieldByName('tcl_nome').AsString;
-          FieldByName('cds_tcl_cidade').AsString  := FQuery.FieldByName('tcl_cidade').AsString;
-          FieldByName('cds_tcl_uf').AsString      := FQuery.FieldByName('tcl_uf').AsString;
-          FieldByName('cds_tdg_pedido_numero').AsInteger := FQuery.FieldByName('tdg_pedido_numero').AsInteger;
-          FieldByName('cds_tdg_data_emissao').AsDateTime := FQuery.FieldByName('tdg_data_emissao').AsDateTime;
-          FieldByName('cds_tdg_valor_total').AsCurrency  := FQuery.FieldByName('tdg_valor_total').AsCurrency;
-          Post;
-         end;
-     end
-  else btConsultaPedido.Enabled := true;
-
+  try
+    if cdsPedido.Active then
+       cdsPedido.EmptyDataSet;
+    dmDb.LocalizarPedido(edNumPedido.Text);
+    if Not dmDb.FQuery.Eof then
+       begin
+         DS.DataSet := dmDb.FQuery;
+         lPedido.Visible := true;
+         sPedido.Visible := true;
+         lNumPedido.Visible := true;
+         lNumPedido.Caption := FormatFloat('000000', dmDb.FQuery.FieldByName('tdg_pedido_numero').AsInteger);
+         with cdsPedido, dmDb do
+           begin
+            FQuery.First;
+            Append;
+            FieldByName('cds_tcl_codigo').AsInteger := FQuery.FieldByName('tcl_codigo').AsInteger;
+            FieldByName('cds_tcl_nome').AsString    := FQuery.FieldByName('tcl_nome').AsString;
+            FieldByName('cds_tcl_cidade').AsString  := FQuery.FieldByName('tcl_cidade').AsString;
+            FieldByName('cds_tcl_uf').AsString      := FQuery.FieldByName('tcl_uf').AsString;
+            FieldByName('cds_tdg_pedido_numero').AsInteger := FQuery.FieldByName('tdg_pedido_numero').AsInteger;
+            FieldByName('cds_tdg_data_emissao').AsDateTime := FQuery.FieldByName('tdg_data_emissao').AsDateTime;
+            FieldByName('cds_tdg_valor_total').AsCurrency  := FQuery.FieldByName('tdg_valor_total').AsCurrency;
+            Post;
+           end;
+       end;
+  finally
+    if dmDb.FQuery.Eof then
+       begin
+         lPedido.Visible := false;
+         sPedido.Visible := false;
+         lNumPedido.Visible := false;
+         lNumPedido.Caption := ''; // <---
+       end;
+    edNumPedido.Clear;
+    btConsultaPedido.Enabled := true;
+  end;
 end;
 
 procedure TfrmConsultas.btEncerrarClick(Sender: TObject);
@@ -108,19 +126,31 @@ end;
 
 procedure TfrmConsultas.btExcluirPedidoClick(Sender: TObject);
 begin
-
-  if StrToIntDef(edCodCliente.Text, 0) > 0 then
-     dmDb.ExcluirPedido(edCodCliente.Text);
+  if lNumPedido.Visible and
+  Not dmDb.FQuery.Eof and
+  cdsPedido.Active and
+  (StrToIntDef(lNumPedido.Caption,0) > 0) and
+  (MessageDlg('Confirma Exclusão do Pedido '+lNumPedido.Caption, mtConfirmation, [mbYes, mbNo], 0) = mrYes) then
+     begin
+       dmDb.ExcluirPedido(lNumPedido.Caption);
+       LimparCampos;
+     end;
 end;
 
-procedure TfrmConsultas.edCodClienteEnter(Sender: TObject);
+procedure TfrmConsultas.edNumPedidoEnter(Sender: TObject);
 begin
   self.bsEditEnter(sender);
 end;
 
-procedure TfrmConsultas.edCodClienteExit(Sender: TObject);
+procedure TfrmConsultas.edNumPedidoExit(Sender: TObject);
 begin
   self.bsEditExit(sender);
+end;
+
+procedure TfrmConsultas.edNumPedidoKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key=#13 then btConsultaPedidoClick(nil)
+  else if Key=#27 then edNumPedido.Clear;
 end;
 
 procedure TfrmConsultas.FormCreate(Sender: TObject);
@@ -140,10 +170,12 @@ end;
 
 procedure TfrmConsultas.LimparCampos;
 begin
-  edCodCliente.Clear;
-  edCodCliente.SetFocus;
   DS.DataSet := nil;
+  edNumPedido.Clear;
+  lNumPedido.Caption := '';
+  dmDb.FQuery.Close;
   cdsPedido.EmptyDataSet;
+  edNumPedido.SetFocus;
 end;
 
 end.

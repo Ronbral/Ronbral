@@ -223,6 +223,7 @@ object frmPedidos: TfrmPedidos
       Top = 176
       Width = 121
       Height = 21
+      Alignment = taRightJustify
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
       Font.Height = -11
@@ -242,6 +243,7 @@ object frmPedidos: TfrmPedidos
       Top = 176
       Width = 121
       Height = 21
+      Alignment = taRightJustify
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
       Font.Height = -11
@@ -381,10 +383,18 @@ object frmPedidos: TfrmPedidos
         Title.Caption = 'Vlr.Total'
         Width = 112
         Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'cds_item_editado'
+        ReadOnly = True
+        Title.Caption = 'EDT'
+        Width = 96
+        Visible = True
       end>
   end
   object DS: TDataSource
-    DataSet = dmDb.ClientDataSet
+    DataSet = dmDb.cdsProdutos
     Left = 32
     Top = 216
   end

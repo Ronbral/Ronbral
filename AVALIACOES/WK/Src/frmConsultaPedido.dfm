@@ -84,7 +84,40 @@ object frmConsultas: TfrmConsultas
       Font.Style = [fsBold]
       ParentFont = False
     end
-    object edCodCliente: TEdit
+    object sPedido: TShape
+      Left = 240
+      Top = 19
+      Width = 273
+      Height = 57
+      Brush.Color = 14803425
+      Pen.Color = clSilver
+      Shape = stRoundRect
+      Visible = False
+    end
+    object lNumPedido: TLabel
+      Left = 427
+      Top = 34
+      Width = 65
+      Height = 25
+      Alignment = taRightJustify
+      Caption = '00000'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clNavy
+      Font.Height = -21
+      Font.Name = 'Tahoma'
+      Font.Style = [fsBold]
+      ParentFont = False
+      Visible = False
+    end
+    object lPedido: TLabel
+      Left = 248
+      Top = 21
+      Width = 87
+      Height = 13
+      Caption = 'N'#250'mero do Pedido'
+      Visible = False
+    end
+    object edNumPedido: TEdit
       Left = 23
       Top = 53
       Width = 121
@@ -99,8 +132,9 @@ object frmConsultas: TfrmConsultas
       ParentFont = False
       TabOrder = 0
       Text = 'edNumPedido'
-      OnEnter = edCodClienteEnter
-      OnExit = edCodClienteExit
+      OnEnter = edNumPedidoEnter
+      OnExit = edNumPedidoExit
+      OnKeyPress = edNumPedidoKeyPress
     end
     object btConsultaPedido: TButton
       Left = 150
@@ -305,8 +339,8 @@ object frmConsultas: TfrmConsultas
   object cdsPedido: TClientDataSet
     Aggregates = <>
     Params = <>
-    Left = 256
-    Top = 40
+    Left = 464
+    Top = 208
     object cdsPedidocds_tcl_codigo: TLargeintField
       FieldName = 'cds_tcl_codigo'
     end
@@ -334,7 +368,7 @@ object frmConsultas: TfrmConsultas
   end
   object DSPedido: TDataSource
     DataSet = cdsPedido
-    Left = 344
-    Top = 40
+    Left = 528
+    Top = 208
   end
 end
